@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -33,7 +34,21 @@ PER_PAGE = 50
 SITE_NAME = "Rogueware Removal League"
 SITE_NAME_CN = "流氓软件卸载竞赛"
 SITE_DESCRIPTION = "多个流氓软件卸载挑战项目的静态排行榜总览。"
-REPO_URL = "https://github.com/gouxi/rogueware-removal-league"
+
+
+def resolve_repo_url() -> str:
+    explicit_url = os.environ.get("REPO_URL", "").strip()
+    if explicit_url:
+        return explicit_url.rstrip("/")
+
+    github_repository = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if github_repository and "/" in github_repository:
+        return f"https://github.com/{github_repository}"
+
+    return "https://github.com/XiGou/rogueware_removal_league"
+
+
+REPO_URL = resolve_repo_url()
 ISSUES_URL = f"{REPO_URL}/issues"
 PULLS_URL = f"{REPO_URL}/pulls"
 NEW_PROJECT_URL = f"{ISSUES_URL}/new?template=leaderboard_project.md"

@@ -137,4 +137,8 @@ python3 generate_site.py
 3. 上传 `public/`。
 4. 发布到 GitHub Pages。
 
-如果仓库 owner 不是 `gouxi`，请同步修改 `generate_site.py` 里的 `REPO_URL`，这样网页上的 Issue 和 PR 链接会指向正确仓库。
+CI 会通过 `GITHUB_REPOSITORY` 自动生成 GitHub、Issue 和 PR 链接。本地生成时如需覆盖仓库地址，可以运行：
+
+```bash
+REPO_URL=https://github.com/owner/repo python3 generate_site.py
+```
