@@ -17,7 +17,7 @@
 ├── data/
 │   ├── projects.json              # 竞赛项目目录
 │   └── submissions/
-│       └── wintoolbox.json        # 某个项目的成绩
+│       └── wintoolbox/            # 某个项目的成绩目录，每条记录一个 JSON
 ├── assets/
 │   ├── favicon.svg
 │   └── style.css
@@ -28,11 +28,11 @@
 ## 提交成绩
 
 1. 打开对应项目页，阅读计时规则和证据建议。
-2. 创建 GitHub Issue，写清楚项目 slug、总耗时、环境、关键步骤，并附上截图或录屏链接。
-3. Fork 本仓库并新建分支。
-4. 编辑 `data/submissions/<slug>.json`，在数组里追加你的记录。
-5. 本地运行 `python3 generate_site.py`，确认 JSON 没有格式或校验错误。
-6. 提交 PR，标题建议使用 `Add submission: <slug> / YourName - 1234s`。
+2. 点击项目页的“提交成绩”，GitHub Issue 表单会自动预填项目 slug。
+3. 在表单里填写名字、总秒数、计时方式、测试环境、证据链接、关键步骤和完赛感言。
+4. 创建 Issue 后，GitHub Actions 会自动生成单条成绩 JSON 并提交 PR。
+
+你也可以手动提交 PR：在 `data/submissions/<slug>/` 目录新增一个 JSON 文件，文件名建议使用 `YYYY-MM-DD-seconds-name-issue-N.json`，然后运行 `python3 generate_site.py` 校验。
 
 成绩按 `time_seconds` 排序。默认卸载项目使用秒数，越小越靠前。
 
@@ -75,7 +75,9 @@
 新增项目需要同时修改两个地方：
 
 1. 在 `data/projects.json` 追加项目元数据。
-2. 创建 `data/submissions/<slug>.json`，初始内容为 `[]`。
+2. 创建 `data/submissions/<slug>/` 目录，并放入 `.gitkeep`。
+
+也可以先点击首页的“提交新项目”，用结构化 Issue 表单描述 slug、类别、计时规则、证据要求和安全说明。
 
 项目元数据示例：
 

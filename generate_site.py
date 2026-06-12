@@ -3,7 +3,7 @@
 
 Data lives in two layers:
 - data/projects.json declares the league projects.
-- data/submissions/<project-slug>.json stores submissions for each project.
+- data/submissions/<project-slug>/*.json stores one submission per file.
 
 The generator uses only the Python standard library so GitHub Pages builds stay
 small and predictable.
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
@@ -51,9 +51,26 @@ def resolve_repo_url() -> str:
 REPO_URL = resolve_repo_url()
 ISSUES_URL = f"{REPO_URL}/issues"
 PULLS_URL = f"{REPO_URL}/pulls"
-NEW_PROJECT_URL = f"{ISSUES_URL}/new?template=leaderboard_project.md"
-NEW_SUBMISSION_URL = f"{ISSUES_URL}/new?template=submission.md"
+NEW_PROJECT_TEMPLATE = "leaderboard_project.yml"
+NEW_SUBMISSION_TEMPLATE = "submission.yml"
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")
+
+
+def issue_form_url(template: str, **params: object) -> str:
+    query = {"template": template}
+    for key, value in params.items():
+        if value not in (None, ""):
+            query[key] = str(value)
+    return f"{ISSUES_URL}/new?{urlencode(query)}"
+
+
+NEW_PROJECT_URL = issue_form_url(
+    NEW_PROJECT_TEMPLATE,
+    title="Project: ",
+    category="rogueware removal",
+    metric_unit="seconds",
+    sort="asc",
+)
 
 
 @dataclass(frozen=True)
@@ -194,9 +211,9 @@ def normalize_steps(value: object) -> tuple[str, ...]:
     return steps
 
 
-def normalize_submission(raw: object, index: int) -> Submission:
+def normalize_submission(raw: object, label: str) -> Submission:
     if not isinstance(raw, dict):
-        raise ValueError(f"entry #{index} must be an object")
+        raise ValueError(f"{label} must be an object")
 
     try:
         seconds = raw["time_seconds"]
@@ -214,9 +231,9 @@ def normalize_submission(raw: object, index: int) -> Submission:
             pr_url=validate_url(raw.get("pr_url"), "pr_url", required=False),
         )
     except KeyError as exc:
-        raise ValueError(f"entry #{index} is missing required field {exc.args[0]}") from exc
+        raise ValueError(f"{label}: missing required field {exc.args[0]}") from exc
     except ValueError as exc:
-        raise ValueError(f"entry #{index}: {exc}") from exc
+        raise ValueError(f"{label}: {exc}") from exc
 
 
 def load_projects() -> list[Project]:
@@ -250,19 +267,18 @@ def load_projects() -> list[Project]:
 
 
 def load_submissions(project: Project) -> tuple[Submission, ...]:
-    path = SUBMISSIONS_DIR / f"{project.slug}.json"
+    path = SUBMISSIONS_DIR / project.slug
     if not path.exists():
-        raise SystemExit(f"Missing submissions file for {project.slug}: {path}")
-
-    raw_submissions = load_json(path)
-    if not isinstance(raw_submissions, list):
-        raise SystemExit(f"{path} must contain a JSON array")
+        raise SystemExit(f"Missing submissions directory for {project.slug}: {path}")
+    if not path.is_dir():
+        raise SystemExit(f"{path} must be a directory containing one JSON file per submission")
 
     submissions: list[Submission] = []
     errors: list[str] = []
-    for index, raw_submission in enumerate(raw_submissions, start=1):
+    for submission_file in sorted(path.glob("*.json")):
         try:
-            submissions.append(normalize_submission(raw_submission, index))
+            raw_submission = load_json(submission_file)
+            submissions.append(normalize_submission(raw_submission, str(submission_file.relative_to(ROOT))))
         except ValueError as exc:
             errors.append(str(exc))
 
@@ -345,6 +361,19 @@ def latest_date(submissions: tuple[Submission, ...]) -> str:
 def project_page_href(slug: str, page: int) -> str:
     suffix = "index.html" if page == 1 else f"page{page}.html"
     return f"{slug}/{suffix}"
+
+
+def submission_issue_url(project: Project) -> str:
+    return issue_form_url(
+        NEW_SUBMISSION_TEMPLATE,
+        title=f"Submission: {project.slug} / ",
+        project_slug=project.slug,
+        project_title=project.title,
+    )
+
+
+def submission_file_hint(project: Project) -> str:
+    return f"data/submissions/{project.slug}/YYYY-MM-DD-handle-issue-N.json"
 
 
 def page_href(page: int) -> str:
@@ -530,7 +559,7 @@ def render_index(states: list[ProjectState], built_at: str) -> str:
         <ol class="rule-list">
           <li>在 Issue 中说明新榜单要测试什么、如何计时、如何判定完成。</li>
           <li>在 <code>data/projects.json</code> 追加一个项目对象，slug 使用小写字母、数字和连字符。</li>
-          <li>创建 <code>data/submissions/&lt;slug&gt;.json</code>，初始内容为 <code>[]</code>。</li>
+          <li>创建 <code>data/submissions/&lt;slug&gt;/</code> 目录，并放入 <code>.gitkeep</code>。</li>
           <li>运行 <code>python3 generate_site.py</code>，确认总览页和项目页都能生成。</li>
         </ol>
       </div>
@@ -626,7 +655,7 @@ def render_empty_state(project: Project) -> str:
                   <p class="empty-kicker">NO RUNS LOGGED</p>
                   <h2>首个成绩还空着。</h2>
                   <p>{html(project.summary)} 把 Issue、证据和 PR 一起提交即可上榜。</p>
-                  <a class="button" href="{NEW_SUBMISSION_URL}" target="_blank" rel="noopener noreferrer">创建成绩 Issue</a>
+                  <a class="button" href="#submit">提交首个成绩</a>
                 </div>
               </td>
             </tr>
@@ -645,6 +674,146 @@ def render_submission_sample(project: Project) -> str:
         "date": "2026-06-11",
     }
     return html(json.dumps(sample, ensure_ascii=False, indent=2))
+
+
+def render_submission_form(project: Project) -> str:
+    direct_issue_url = submission_issue_url(project)
+    return f"""
+    <section class="submit-section" id="submit" aria-labelledby="submit-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">SUBMIT RUN</p>
+          <h2 id="submit-title">提交成绩</h2>
+        </div>
+        <p>创建 Issue 后会自动生成 PR</p>
+      </div>
+      <form class="submission-form" data-submission-form data-issue-base="{html(ISSUES_URL + "/new")}" data-template="{NEW_SUBMISSION_TEMPLATE}" data-project-slug="{html(project.slug)}" data-project-title="{html(project.title)}">
+        <label>
+          <span>名字或 ID</span>
+          <input name="name" autocomplete="nickname" required placeholder="YourName">
+        </label>
+        <label>
+          <span>总秒数</span>
+          <input name="time_seconds" inputmode="numeric" pattern="[0-9]+" required placeholder="1234">
+        </label>
+        <label>
+          <span>可读耗时</span>
+          <input name="total_time" placeholder="20m 34s">
+        </label>
+        <label>
+          <span>完赛日期</span>
+          <input name="date" type="date" required>
+        </label>
+        <label>
+          <span>计时方式</span>
+          <select name="timing_method" required>
+            <option value="Stopwatch or timer">计时器</option>
+            <option value="Screen recording timeline">录屏时间轴</option>
+            <option value="Script or command log">脚本或命令日志</option>
+            <option value="Other verifiable method">其他可验证方式</option>
+          </select>
+        </label>
+        <label>
+          <span>测试环境</span>
+          <select name="environment_type" required>
+            <option value="Virtual machine">虚拟机</option>
+            <option value="Physical test machine">物理测试机</option>
+            <option value="Cloud VM or remote desktop">云主机或远程桌面</option>
+            <option value="Other isolated environment">其他隔离环境</option>
+          </select>
+        </label>
+        <label>
+          <span>环境说明</span>
+          <input name="environment_detail" required placeholder="Windows 11 VM, fresh snapshot">
+        </label>
+        <label>
+          <span>证据类型</span>
+          <select name="evidence_type" required>
+            <option value="Screenshots">截图</option>
+            <option value="Screen recording">录屏</option>
+            <option value="Issue with attached media">Issue 附件</option>
+            <option value="Mixed evidence">混合证据</option>
+          </select>
+        </label>
+        <label class="form-wide">
+          <span>证据链接</span>
+          <input name="evidence_url" type="url" required placeholder="https://github.com/owner/repo/issues/1">
+        </label>
+        <label class="form-wide">
+          <span>关键步骤</span>
+          <textarea name="key_steps" rows="5" required placeholder="1. 安装完成后开始计时&#10;2. 卸载主程序&#10;3. 清理服务、启动项、计划任务和目录&#10;4. 重启后确认无明显残留"></textarea>
+        </label>
+        <label>
+          <span>清理确认</span>
+          <select name="cleanup_confirmation" required>
+            <option value="Rebooted or signed out and confirmed no obvious leftovers">重启或重新登录后确认</option>
+            <option value="Did not reboot, but checked processes, services, startup items, and folders">未重启，但检查进程、服务、启动项和目录</option>
+            <option value="Needs maintainer review">需要维护者复核</option>
+          </select>
+        </label>
+        <label>
+          <span>完赛感言</span>
+          <input name="completion_quote" maxlength="120" required placeholder="It is finally gone.">
+        </label>
+        <div class="form-actions form-wide">
+          <button class="button" type="submit">生成 Issue</button>
+          <a class="button button--ghost" href="{html(direct_issue_url)}" target="_blank" rel="noopener noreferrer">打开空表单</a>
+        </div>
+      </form>
+    </section>
+    """
+
+
+def render_submission_script() -> str:
+    return """
+  <script>
+    (() => {
+      const today = new Date().toISOString().slice(0, 10);
+      document.querySelectorAll("[data-submission-form]").forEach((form) => {
+        const dateInput = form.elements.date;
+        if (dateInput && !dateInput.value) {
+          dateInput.value = today;
+        }
+
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const values = new FormData(form);
+          const params = new URLSearchParams();
+          const slug = form.dataset.projectSlug;
+          const name = values.get("name") || "Runner";
+          const seconds = values.get("time_seconds") || "0";
+
+          params.set("template", form.dataset.template);
+          params.set("title", `Submission: ${slug} / ${name} - ${seconds}s`);
+          params.set("project_slug", slug);
+          params.set("project_title", form.dataset.projectTitle);
+
+          [
+            "name",
+            "time_seconds",
+            "total_time",
+            "date",
+            "timing_method",
+            "environment_type",
+            "environment_detail",
+            "evidence_type",
+            "evidence_url",
+            "key_steps",
+            "cleanup_confirmation",
+            "completion_quote",
+          ].forEach((key) => {
+            const value = values.get(key);
+            if (value) {
+              params.set(key, value);
+            }
+          });
+
+          window.open(`${form.dataset.issueBase}?${params.toString()}`, "_blank", "noopener");
+        });
+      });
+    })();
+  </script>
+    """
 
 
 def render_rule_items(items: tuple[str, ...]) -> str:
@@ -675,7 +844,7 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
         <h1 id="page-title">{html(project.title)}</h1>
         <p class="dek">{html(project.description)}</p>
         <div class="hero-actions">
-          <a class="button" href="{NEW_SUBMISSION_URL}" target="_blank" rel="noopener noreferrer">提交成绩</a>
+          <a class="button" href="#submit">提交成绩</a>
           <a class="button button--ghost" href="../index.html#projects">全部项目</a>
         </div>
       </div>
@@ -727,6 +896,8 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
       {render_pagination(page, total_pages)}
     </section>
 
+{render_submission_form(project)}
+
     <section class="rules" id="rules" aria-labelledby="rules-title">
       <div class="rules-copy">
         <p class="eyebrow">SUBMISSION PROTOCOL</p>
@@ -734,7 +905,7 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
         <p class="notice">{html(project.safety_notice)}</p>
         <ol class="rule-list">
           {render_rule_items(project.rules)}
-          <li>创建 GitHub Issue 写明耗时、证据、关键步骤，再提交 PR 修改 <code>data/submissions/{html(project.slug)}.json</code>。</li>
+          <li>创建 GitHub Issue 写明耗时、证据、关键步骤；系统会生成 <code>{html(submission_file_hint(project))}</code> 并自动提交 PR。</li>
         </ol>
         <h3>证据建议</h3>
         <ul class="tip-list">
@@ -743,7 +914,7 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
       </div>
       <div class="schema-card" aria-label="JSON 提交示例">
         <div class="schema-card__bar">
-          <span>data/submissions/{html(project.slug)}.json</span>
+          <span>{html(submission_file_hint(project))}</span>
           <span>SUBMISSION</span>
         </div>
         <pre><code>{render_submission_sample(project)}</code></pre>
@@ -755,6 +926,7 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
     <span>Generated {html(built_at)}</span>
     <a href="{REPO_URL}" target="_blank" rel="noopener noreferrer">GitHub</a>
   </footer>
+{render_submission_script()}
 </body>
 </html>
 """

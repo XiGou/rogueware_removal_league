@@ -14,7 +14,7 @@
 
 ## Submission Checklist
 
-- [ ] I edited `data/submissions/<slug>.json`.
+- [ ] I added one JSON file under `data/submissions/<slug>/`.
 - [ ] `time_seconds` is a positive integer.
 - [ ] `message` is one short completion quote.
 - [ ] `steps` includes the key challenge steps.
@@ -23,7 +23,7 @@
 ## New League Project Checklist
 
 - [ ] I edited `data/projects.json`.
-- [ ] I created `data/submissions/<slug>.json` with `[]`.
+- [ ] I created `data/submissions/<slug>/` with `.gitkeep`.
 - [ ] The slug uses lowercase letters, numbers, and hyphens only.
 - [ ] The rules define the start point, end point, and completion criteria.
 - [ ] The evidence tips are reviewable.

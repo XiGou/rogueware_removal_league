@@ -1,0 +1,158 @@
+name: Submit league result
+description: Submit a Rogueware Removal League result for an existing project
+title: "Submission: "
+labels: ["submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you opened this form from a project page, the project fields should already be filled in.
+        Please do not include private paths, usernames, emails, device IDs, or license keys in evidence.
+
+  - type: input
+    id: project_slug
+    attributes:
+      label: Project slug
+      description: The leaderboard project this result belongs to.
+      placeholder: wintoolbox
+    validations:
+      required: true
+
+  - type: input
+    id: project_title
+    attributes:
+      label: Project title
+      description: Usually prefilled from the project page.
+      placeholder: wintoolbox Removal Challenge
+    validations:
+      required: false
+
+  - type: input
+    id: name
+    attributes:
+      label: Name or handle
+      placeholder: YourName
+    validations:
+      required: true
+
+  - type: input
+    id: time_seconds
+    attributes:
+      label: Total time in seconds
+      description: Positive integer only.
+      placeholder: "1234"
+    validations:
+      required: true
+
+  - type: input
+    id: total_time
+    attributes:
+      label: Human-readable time
+      description: Optional, for reviewers.
+      placeholder: 20m 34s
+    validations:
+      required: false
+
+  - type: input
+    id: date
+    attributes:
+      label: Completion date
+      description: YYYY-MM-DD.
+      placeholder: "2026-06-12"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: timing_method
+    attributes:
+      label: Timing method
+      options:
+        - Stopwatch or timer
+        - Screen recording timeline
+        - Script or command log
+        - Other verifiable method
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment_type
+    attributes:
+      label: Test environment
+      options:
+        - Virtual machine
+        - Physical test machine
+        - Cloud VM or remote desktop
+        - Other isolated environment
+    validations:
+      required: true
+
+  - type: input
+    id: environment_detail
+    attributes:
+      label: Environment details
+      description: Windows version, VM software, snapshot notes, or other relevant context.
+      placeholder: Windows 11 VM, fresh snapshot
+    validations:
+      required: true
+
+  - type: dropdown
+    id: evidence_type
+    attributes:
+      label: Evidence type
+      options:
+        - Screenshots
+        - Screen recording
+        - Issue with attached media
+        - Mixed evidence
+    validations:
+      required: true
+
+  - type: input
+    id: evidence_url
+    attributes:
+      label: Evidence URL
+      description: Public issue, image, video, or archive link.
+      placeholder: https://github.com/owner/repo/issues/1
+    validations:
+      required: true
+
+  - type: textarea
+    id: key_steps
+    attributes:
+      label: Key steps
+      description: List the important uninstall and cleanup actions.
+      placeholder: |
+        1. Started timer after install completed.
+        2. Removed the main app.
+        3. Cleaned services, startup items, scheduled tasks, and folders.
+        4. Rebooted and confirmed no obvious leftovers.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cleanup_confirmation
+    attributes:
+      label: Cleanup confirmation
+      options:
+        - Rebooted or signed out and confirmed no obvious leftovers
+        - Did not reboot, but checked processes, services, startup items, and folders
+        - Needs maintainer review
+    validations:
+      required: true
+
+  - type: input
+    id: completion_quote
+    attributes:
+      label: Completion quote
+      description: One short sentence for the leaderboard.
+      placeholder: It is finally gone.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: privacy_check
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed or blurred private paths, usernames, emails, device IDs, and license keys.
+          required: true

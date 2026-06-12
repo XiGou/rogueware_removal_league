@@ -1,0 +1,128 @@
+name: Propose league project
+description: Propose a new Rogueware Removal League project
+title: "Project: "
+labels: ["project"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to propose a new league project before opening a PR.
+        A project PR should add one entry to `data/projects.json` and create `data/submissions/<slug>/` with `.gitkeep`.
+
+  - type: input
+    id: slug
+    attributes:
+      label: Project slug
+      description: Lowercase letters, numbers, and hyphens only.
+      placeholder: new-tool
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Display title
+      placeholder: new-tool Removal Challenge
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - rogueware removal
+        - unwanted software removal
+        - cleanup challenge
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: Short summary
+      description: One sentence for the project card.
+      placeholder: Remove new-tool completely as fast as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What this measures
+      description: Explain the start point, end point, and completion criteria.
+      placeholder: |
+        This project measures the total time from install-complete to verified removal.
+    validations:
+      required: true
+
+  - type: input
+    id: metric_label
+    attributes:
+      label: Metric label
+      placeholder: 完全卸载耗时
+    validations:
+      required: true
+
+  - type: dropdown
+    id: metric_unit
+    attributes:
+      label: Metric unit
+      options:
+        - seconds
+        - other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sort
+    attributes:
+      label: Sort direction
+      description: Most removal speedruns should use asc.
+      options:
+        - asc
+        - desc
+    validations:
+      required: true
+
+  - type: textarea
+    id: rules
+    attributes:
+      label: Timing rules
+      description: Define start, end, and any tie-break or special notes.
+      placeholder: |
+        1. Start timing when installation is complete and the app can run.
+        2. Stop timing after removal is complete and no obvious leftovers remain.
+        3. Reboot or sign out if the project requires it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence_tips
+    attributes:
+      label: Evidence requirements
+      placeholder: |
+        1. Start timing screenshot or recording.
+        2. Key uninstall and cleanup steps.
+        3. Final verification screenshot.
+    validations:
+      required: true
+
+  - type: textarea
+    id: safety_notice
+    attributes:
+      label: Safety notes
+      placeholder: Only run this challenge in an isolated test environment.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: project_check
+    attributes:
+      label: Project readiness
+      options:
+        - label: The proposed rules define a clear start point and end point.
+          required: true
+        - label: The evidence requirements are reviewable by maintainers.
+          required: true

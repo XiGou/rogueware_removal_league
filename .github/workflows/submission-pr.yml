@@ -1,0 +1,83 @@
+name: Create submission PR
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  create-submission-pr:
+    if: contains(github.event.issue.labels.*.name, 'submission')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate submission JSON
+        id: submission
+        run: python3 scripts/issue_to_submission.py "$GITHUB_EVENT_PATH"
+
+      - name: Validate generated site
+        run: python3 generate_site.py
+
+      - name: Commit submission branch
+        env:
+          BRANCH: ${{ steps.submission.outputs.branch }}
+          FILE_PATH: ${{ steps.submission.outputs.path }}
+          COMMIT_MESSAGE: ${{ steps.submission.outputs.commit_message }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH" || true
+          git checkout -B "$BRANCH"
+          git add "$FILE_PATH"
+          if git diff --cached --quiet; then
+            echo "No submission changes to commit."
+          else
+            git commit -m "$COMMIT_MESSAGE"
+          fi
+          git push --force-with-lease origin "$BRANCH"
+
+      - name: Open pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.submission.outputs.branch }}
+          PR_TITLE: ${{ steps.submission.outputs.pr_title }}
+          ISSUE_NUMBER: ${{ steps.submission.outputs.issue_number }}
+          FILE_PATH: ${{ steps.submission.outputs.path }}
+        run: |
+          body="$(cat <<EOF
+          Auto-generated from #${ISSUE_NUMBER}.
+
+          Submission file:
+          \`${FILE_PATH}\`
+          EOF
+          )"
+
+          set +e
+          pr_url="$(gh pr create --title "$PR_TITLE" --body "$body" --base main --head "$BRANCH" 2>/tmp/pr-error.log)"
+          status=$?
+          set -e
+
+          if [ "$status" -ne 0 ]; then
+            cat /tmp/pr-error.log
+            pr_url="$(gh pr view "$BRANCH" --json url -q .url)"
+          fi
+
+          echo "url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ steps.submission.outputs.issue_number }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Created submission PR: $PR_URL"
