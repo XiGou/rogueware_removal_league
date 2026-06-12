@@ -7,6 +7,8 @@ body:
     attributes:
       value: |
         If you opened this form from a project page, the project fields should already be filled in.
+        This issue will be used as the leaderboard proof link.
+        After creating the issue, add detailed evidence in issue comments: screenshots, recordings, environment notes, timing method, and cleanup verification.
         Please do not include private paths, usernames, emails, device IDs, or license keys in evidence.
 
   - type: input
@@ -39,19 +41,10 @@ body:
     id: time_seconds
     attributes:
       label: Total time in seconds
-      description: Positive integer only.
+      description: Positive integer seconds only. The project page converts duration formats before opening this issue.
       placeholder: "1234"
     validations:
       required: true
-
-  - type: input
-    id: total_time
-    attributes:
-      label: Human-readable time
-      description: Optional, for reviewers.
-      placeholder: 20m 34s
-    validations:
-      required: false
 
   - type: input
     id: date
@@ -59,60 +52,6 @@ body:
       label: Completion date
       description: YYYY-MM-DD.
       placeholder: "2026-06-12"
-    validations:
-      required: true
-
-  - type: dropdown
-    id: timing_method
-    attributes:
-      label: Timing method
-      options:
-        - Stopwatch or timer
-        - Screen recording timeline
-        - Script or command log
-        - Other verifiable method
-    validations:
-      required: true
-
-  - type: dropdown
-    id: environment_type
-    attributes:
-      label: Test environment
-      options:
-        - Virtual machine
-        - Physical test machine
-        - Cloud VM or remote desktop
-        - Other isolated environment
-    validations:
-      required: true
-
-  - type: input
-    id: environment_detail
-    attributes:
-      label: Environment details
-      description: Windows version, VM software, snapshot notes, or other relevant context.
-      placeholder: Windows 11 VM, fresh snapshot
-    validations:
-      required: true
-
-  - type: dropdown
-    id: evidence_type
-    attributes:
-      label: Evidence type
-      options:
-        - Screenshots
-        - Screen recording
-        - Issue with attached media
-        - Mixed evidence
-    validations:
-      required: true
-
-  - type: input
-    id: evidence_url
-    attributes:
-      label: Evidence URL
-      description: Public issue, image, video, or archive link.
-      placeholder: https://github.com/owner/repo/issues/1
     validations:
       required: true
 
@@ -129,17 +68,6 @@ body:
     validations:
       required: true
 
-  - type: dropdown
-    id: cleanup_confirmation
-    attributes:
-      label: Cleanup confirmation
-      options:
-        - Rebooted or signed out and confirmed no obvious leftovers
-        - Did not reboot, but checked processes, services, startup items, and folders
-        - Needs maintainer review
-    validations:
-      required: true
-
   - type: input
     id: completion_quote
     attributes:
@@ -150,9 +78,9 @@ body:
       required: true
 
   - type: checkboxes
-    id: privacy_check
+    id: evidence_followup
     attributes:
-      label: Privacy check
+      label: Evidence follow-up
       options:
-        - label: I removed or blurred private paths, usernames, emails, device IDs, and license keys.
+        - label: I will add detailed evidence in issue comments and remove or blur private information.
           required: true

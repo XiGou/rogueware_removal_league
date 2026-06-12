@@ -121,29 +121,30 @@ def main() -> None:
     seconds_text = require(sections, "Total time in seconds")
     if not seconds_text.isdigit() or int(seconds_text) <= 0:
         raise SystemExit("Total time in seconds must be a positive integer")
+    seconds = int(seconds_text)
 
     date = validate_date(require(sections, "Completion date"))
-    evidence_url = validate_url(require(sections, "Evidence URL"), "Evidence URL")
+    issue_url = validate_url(issue["html_url"], "Issue URL")
     steps = parse_steps(require(sections, "Key steps"))
     message = require(sections, "Completion quote")
 
     submission = {
         "name": name,
-        "time_seconds": int(seconds_text),
+        "time_seconds": seconds,
         "message": message,
-        "evidence_url": evidence_url,
-        "issue_url": issue["html_url"],
+        "evidence_url": issue_url,
+        "issue_url": issue_url,
         "steps": steps,
         "date": date,
     }
 
-    file_name = f"{date}-{int(seconds_text):06d}-{safe_name(name)}-issue-{issue['number']}.json"
+    file_name = f"{date}-{seconds:06d}-{safe_name(name)}-issue-{issue['number']}.json"
     output_path = submission_dir / file_name
     output_path.write_text(json.dumps(submission, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     relative_path = output_path.relative_to(ROOT)
     branch = f"submission/issue-{issue['number']}-{project_slug}"
-    title = f"Add submission: {project_slug} / {name} - {seconds_text}s"
+    title = f"Add submission: {project_slug} / {name} - {seconds}s"
 
     write_output("path", str(relative_path))
     write_output("branch", branch)

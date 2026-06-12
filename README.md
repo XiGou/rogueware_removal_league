@@ -29,12 +29,15 @@
 
 1. 打开对应项目页，阅读计时规则和证据建议。
 2. 点击项目页的“提交成绩”，GitHub Issue 表单会自动预填项目 slug。
-3. 在表单里填写名字、总秒数、计时方式、测试环境、证据链接、关键步骤和完赛感言。
+3. 在项目页表单里填写名字、总耗时、完赛日期、关键步骤和完赛感言。总耗时支持 `20m 34s`、`1:02:03`、`1234s` 或 `20分34秒`，打开 GitHub Issue 前会被前端转换成秒数。
 4. 创建 Issue 后，GitHub Actions 会自动生成单条成绩 JSON 并提交 PR。
+5. 在 Issue 评论里补充详细佐证信息，例如截图、录屏、测试环境、计时方式和清理确认过程。
+
+Issue 表单只收集会进入榜单 JSON 的核心字段。自动 PR 会把该 Issue 本身作为 `evidence_url`。详细佐证不会影响自动 PR 生成，请放在 Issue 评论里，方便维护者和其他参赛者复核。
 
 你也可以手动提交 PR：在 `data/submissions/<slug>/` 目录新增一个 JSON 文件，文件名建议使用 `YYYY-MM-DD-seconds-name-issue-N.json`，然后运行 `python3 generate_site.py` 校验。
 
-成绩按 `time_seconds` 排序。默认卸载项目使用秒数，越小越靠前。
+成绩按 `time_seconds` 排序。GitHub Issue 表单只接受秒数；项目页表单会先把自然耗时转换成秒数再打开 Issue。默认卸载项目越小越靠前。
 
 成绩记录格式：
 
@@ -61,7 +64,7 @@
 - `name`: 参赛者名称，40 字以内。
 - `time_seconds`: 总耗时秒数，正整数。
 - `message`: 一句完赛感言，120 字以内。
-- `evidence_url`: 可公开访问的证据链接，必须是 `http://` 或 `https://`。
+- `evidence_url`: 可公开访问的证据链接，必须是 `http://` 或 `https://`。通过 Issue 表单提交时会自动使用该 Issue 链接。
 - `steps`: 1 到 6 个关键步骤，可以是字符串数组。
 - `date`: 完赛日期，格式为 `YYYY-MM-DD`。
 

@@ -685,78 +685,32 @@ def render_submission_form(project: Project) -> str:
           <p class="eyebrow">SUBMIT RUN</p>
           <h2 id="submit-title">提交成绩</h2>
         </div>
-        <p>创建 Issue 后会自动生成 PR</p>
+        <p>填写关键字段，Issue 创建后会自动生成 PR</p>
       </div>
+      <p class="form-note">这个 Issue 会作为榜单证据链接。详细佐证不影响自动 PR，创建 Issue 后请在评论里补充截图、录屏、测试环境、计时方式和清理确认过程。</p>
       <form class="submission-form" data-submission-form data-issue-base="{html(ISSUES_URL + "/new")}" data-template="{NEW_SUBMISSION_TEMPLATE}" data-project-slug="{html(project.slug)}" data-project-title="{html(project.title)}">
         <label>
           <span>名字或 ID</span>
           <input name="name" autocomplete="nickname" required placeholder="YourName">
         </label>
         <label>
-          <span>总秒数</span>
-          <input name="time_seconds" inputmode="numeric" pattern="[0-9]+" required placeholder="1234">
-        </label>
-        <label>
-          <span>可读耗时</span>
-          <input name="total_time" placeholder="20m 34s">
+          <span>总耗时</span>
+          <input name="elapsed_time" required placeholder="20m 34s / 1234s / 20分34秒">
         </label>
         <label>
           <span>完赛日期</span>
           <input name="date" type="date" required>
         </label>
-        <label>
-          <span>计时方式</span>
-          <select name="timing_method" required>
-            <option value="Stopwatch or timer">计时器</option>
-            <option value="Screen recording timeline">录屏时间轴</option>
-            <option value="Script or command log">脚本或命令日志</option>
-            <option value="Other verifiable method">其他可验证方式</option>
-          </select>
-        </label>
-        <label>
-          <span>测试环境</span>
-          <select name="environment_type" required>
-            <option value="Virtual machine">虚拟机</option>
-            <option value="Physical test machine">物理测试机</option>
-            <option value="Cloud VM or remote desktop">云主机或远程桌面</option>
-            <option value="Other isolated environment">其他隔离环境</option>
-          </select>
-        </label>
-        <label>
-          <span>环境说明</span>
-          <input name="environment_detail" required placeholder="Windows 11 VM, fresh snapshot">
-        </label>
-        <label>
-          <span>证据类型</span>
-          <select name="evidence_type" required>
-            <option value="Screenshots">截图</option>
-            <option value="Screen recording">录屏</option>
-            <option value="Issue with attached media">Issue 附件</option>
-            <option value="Mixed evidence">混合证据</option>
-          </select>
-        </label>
-        <label class="form-wide">
-          <span>证据链接</span>
-          <input name="evidence_url" type="url" required placeholder="https://github.com/owner/repo/issues/1">
-        </label>
         <label class="form-wide">
           <span>关键步骤</span>
           <textarea name="key_steps" rows="5" required placeholder="1. 安装完成后开始计时&#10;2. 卸载主程序&#10;3. 清理服务、启动项、计划任务和目录&#10;4. 重启后确认无明显残留"></textarea>
         </label>
-        <label>
-          <span>清理确认</span>
-          <select name="cleanup_confirmation" required>
-            <option value="Rebooted or signed out and confirmed no obvious leftovers">重启或重新登录后确认</option>
-            <option value="Did not reboot, but checked processes, services, startup items, and folders">未重启，但检查进程、服务、启动项和目录</option>
-            <option value="Needs maintainer review">需要维护者复核</option>
-          </select>
-        </label>
-        <label>
+        <label class="form-wide">
           <span>完赛感言</span>
           <input name="completion_quote" maxlength="120" required placeholder="It is finally gone.">
         </label>
         <div class="form-actions form-wide">
-          <button class="button" type="submit">生成 Issue</button>
+          <button class="button" type="submit">打开预填 Issue</button>
           <a class="button button--ghost" href="{html(direct_issue_url)}" target="_blank" rel="noopener noreferrer">打开空表单</a>
         </div>
       </form>
@@ -769,11 +723,60 @@ def render_submission_script() -> str:
   <script>
     (() => {
       const today = new Date().toISOString().slice(0, 10);
+      const parseElapsedSeconds = (rawValue) => {
+        const value = String(rawValue || "").trim().toLowerCase().replaceAll("：", ":");
+        if (/^\\d+$/.test(value)) {
+          return Number(value);
+        }
+
+        if (value.includes(":")) {
+          const parts = value.split(":");
+          if (![2, 3].includes(parts.length) || parts.some((part) => !/^\\d+$/.test(part))) {
+            return null;
+          }
+          const numbers = parts.map(Number);
+          if (numbers.length === 2) {
+            const [minutes, seconds] = numbers;
+            return seconds < 60 ? minutes * 60 + seconds : null;
+          }
+          const [hours, minutes, seconds] = numbers;
+          return minutes < 60 && seconds < 60 ? hours * 3600 + minutes * 60 + seconds : null;
+        }
+
+        let seconds = 0;
+        let matched = false;
+        const leftover = value.replace(
+          /(\\d+)\\s*(hours?|hrs?|h|小时|时|minutes?|mins?|m|分钟|分|seconds?|secs?|s|秒)/gi,
+          (_, amountText, unitText) => {
+            matched = true;
+            const amount = Number(amountText);
+            const unit = unitText.toLowerCase();
+            if (["h", "hr", "hrs", "hour", "hours", "小时", "时"].includes(unit)) {
+              seconds += amount * 3600;
+            } else if (["m", "min", "mins", "minute", "minutes", "分钟", "分"].includes(unit)) {
+              seconds += amount * 60;
+            } else {
+              seconds += amount;
+            }
+            return " ";
+          },
+        );
+
+        if (!matched || leftover.replace(/[\\s,，]+/g, "") !== "") {
+          return null;
+        }
+        return seconds;
+      };
+
       document.querySelectorAll("[data-submission-form]").forEach((form) => {
         const dateInput = form.elements.date;
+        const elapsedInput = form.elements.elapsed_time;
         if (dateInput && !dateInput.value) {
           dateInput.value = today;
         }
+        elapsedInput.addEventListener("input", () => {
+          elapsedInput.setCustomValidity("");
+        });
 
         form.addEventListener("submit", (event) => {
           event.preventDefault();
@@ -781,25 +784,26 @@ def render_submission_script() -> str:
           const params = new URLSearchParams();
           const slug = form.dataset.projectSlug;
           const name = values.get("name") || "Runner";
-          const seconds = values.get("time_seconds") || "0";
+          const seconds = parseElapsedSeconds(values.get("elapsed_time"));
+
+          if (!seconds || seconds <= 0) {
+            elapsedInput.setCustomValidity("请输入秒数或类似 20m 34s、1:02:03、20分34秒 的耗时");
+            elapsedInput.reportValidity();
+            return;
+          }
+
+          elapsedInput.setCustomValidity("");
 
           params.set("template", form.dataset.template);
           params.set("title", `Submission: ${slug} / ${name} - ${seconds}s`);
           params.set("project_slug", slug);
           params.set("project_title", form.dataset.projectTitle);
+          params.set("time_seconds", String(seconds));
 
           [
             "name",
-            "time_seconds",
-            "total_time",
             "date",
-            "timing_method",
-            "environment_type",
-            "environment_detail",
-            "evidence_type",
-            "evidence_url",
             "key_steps",
-            "cleanup_confirmation",
             "completion_quote",
           ].forEach((key) => {
             const value = values.get(key);
@@ -905,7 +909,7 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
         <p class="notice">{html(project.safety_notice)}</p>
         <ol class="rule-list">
           {render_rule_items(project.rules)}
-          <li>创建 GitHub Issue 写明耗时、证据、关键步骤；系统会生成 <code>{html(submission_file_hint(project))}</code> 并自动提交 PR。</li>
+          <li>创建 GitHub Issue 填写榜单核心字段，系统会把该 Issue 作为证据链接，生成 <code>{html(submission_file_hint(project))}</code> 并自动提交 PR；详细佐证请继续发在该 Issue 评论里。</li>
         </ol>
         <h3>证据建议</h3>
         <ul class="tip-list">
