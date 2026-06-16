@@ -2,7 +2,9 @@ name: Create submission PR
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -11,7 +13,17 @@ permissions:
 
 jobs:
   create-submission-pr:
-    if: contains(github.event.issue.labels.*.name, 'submission')
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event.issue.body != null &&
+      startsWith(github.event.issue.title, 'Submission:') &&
+      contains(github.event.issue.body, '### Project slug') &&
+      contains(github.event.issue.body, '### Total time in seconds') &&
+      contains(github.event.issue.body, '### Name or handle') &&
+      (
+        github.event_name == 'issues' ||
+        contains(github.event.comment.body || '', '/create-submission-pr')
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

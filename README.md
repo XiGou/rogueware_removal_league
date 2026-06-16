@@ -35,6 +35,8 @@
 
 Issue 表单只收集会进入榜单 JSON 的核心字段。自动 PR 会把该 Issue 本身作为 `evidence_url`。详细佐证不会影响自动 PR 生成，请放在 Issue 评论里，方便维护者和其他参赛者复核。
 
+如果自动 PR 没有触发，可以重新打开该 Issue，或在 Issue 评论里单独发送 `/create-submission-pr` 手动触发。
+
 你也可以手动提交 PR：在 `data/submissions/<slug>/` 目录新增一个 JSON 文件，文件名建议使用 `YYYY-MM-DD-seconds-name-issue-N.json`，然后运行 `python3 generate_site.py` 校验。
 
 成绩按 `time_seconds` 排序。GitHub Issue 表单只接受秒数；项目页表单会先把自然耗时转换成秒数再打开 Issue。默认卸载项目越小越靠前。
