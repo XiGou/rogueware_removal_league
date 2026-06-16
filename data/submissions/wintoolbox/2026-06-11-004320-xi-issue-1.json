@@ -1,0 +1,14 @@
+{
+  "name": "xi",
+  "time_seconds": 4320,
+  "message": "部分软件工程师是坏人",
+  "evidence_url": "https://github.com/XiGou/rogueware_removal_league/issues/1",
+  "issue_url": "https://github.com/XiGou/rogueware_removal_league/issues/1",
+  "steps": [
+    "搜索  SoftMgrExt64.dll 清理注册表",
+    "删除可执行文件",
+    "寻找并且停止占用 dll 的进程",
+    "删除全部 dll"
+  ],
+  "date": "2026-06-11"
+}
