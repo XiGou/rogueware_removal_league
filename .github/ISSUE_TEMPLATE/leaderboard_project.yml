@@ -39,6 +39,15 @@ body:
       required: true
 
   - type: input
+    id: download_url
+    attributes:
+      label: Software download URL
+      description: Official download page or installer URL for the challenge target.
+      placeholder: https://example.com/download
+    validations:
+      required: true
+
+  - type: input
     id: summary
     attributes:
       label: Short summary

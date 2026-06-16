@@ -92,6 +92,7 @@ Issue 表单只收集会进入榜单 JSON 的核心字段。自动 PR 会把该 
   "name": "new-tool",
   "title": "new-tool Removal Challenge",
   "category": "rogueware removal",
+  "download_url": "https://example.com/download",
   "summary": "一句话说明这个流氓软件卸载项目测什么。",
   "description": "更完整的项目说明，写清起点、终点和判定标准。",
   "metric_label": "完全卸载耗时",
@@ -114,6 +115,7 @@ Issue 表单只收集会进入榜单 JSON 的核心字段。自动 PR 会把该 
 
 - `slug`: 小写字母、数字和连字符，作为 URL 与成绩文件名。
 - `title`: 页面标题，建议使用 `<name> Removal Challenge`。
+- `download_url`: 软件官方下载页或安装包链接，必须是 `http://` 或 `https://`。
 - `summary`: 项目卡片上的一句话简介。
 - `description`: 项目页说明。
 - `metric_unit`: 当前建议使用 `seconds`。

@@ -79,6 +79,7 @@ class Project:
     name: str
     title: str
     category: str
+    download_url: str
     summary: str
     description: str
     metric_label: str
@@ -184,6 +185,7 @@ def normalize_project(raw: object, index: int) -> Project:
             name=validate_text(raw.get("name"), "name", 60),
             title=validate_text(raw.get("title"), "title", 80),
             category=validate_text(raw.get("category"), "category", 32),
+            download_url=validate_url(raw.get("download_url"), "download_url"),
             summary=validate_text(raw.get("summary"), "summary", 120),
             description=validate_text(raw.get("description"), "description", 240),
             metric_label=validate_text(raw.get("metric_label"), "metric_label", 40),
@@ -500,6 +502,7 @@ def render_project_sample() -> str:
         "name": "new-tool",
         "title": "new-tool Removal Challenge",
         "category": "rogueware removal",
+        "download_url": "https://example.com/download",
         "summary": "一句话说明这个流氓软件卸载项目测什么。",
         "description": "更完整的项目说明，写清起点、终点和判定标准。",
         "metric_label": "完全卸载耗时",
@@ -601,9 +604,41 @@ def render_pagination(page: int, total_pages: int) -> str:
     return f'<nav class="pagination" aria-label="排行榜分页">{"".join(links)}</nav>'
 
 
-def render_steps(steps: tuple[str, ...]) -> str:
-    items = "".join(f"<li>{html(step)}</li>" for step in steps)
-    return f'<ol class="steps">{items}</ol>'
+def render_steps_button(project: Project, entry: Submission, rank: int) -> str:
+    steps_payload = html(json.dumps(entry.steps, ensure_ascii=False))
+    return f"""
+                <button
+                  class="steps-button"
+                  type="button"
+                  data-steps-button
+                  data-rank="{rank}"
+                  data-runner="{html(entry.name)}"
+                  data-metric="{html(display_metric(project, entry.time_seconds))}"
+                  data-steps="{steps_payload}"
+                  aria-haspopup="dialog"
+                  aria-controls="steps-dialog">
+                  <span>查看步骤</span>
+                  <strong>{len(entry.steps)} 项</strong>
+                </button>
+    """
+
+
+def render_steps_dialog() -> str:
+    return """
+      <dialog class="steps-dialog" id="steps-dialog" data-steps-dialog aria-labelledby="steps-dialog-title">
+        <div class="steps-dialog__panel">
+          <div class="steps-dialog__header">
+            <div>
+              <p class="eyebrow">KEY STEPS</p>
+              <h3 id="steps-dialog-title">关键步骤</h3>
+              <p class="steps-dialog__meta" data-steps-meta></p>
+            </div>
+            <button class="steps-dialog__close" type="button" data-steps-close aria-label="关闭">×</button>
+          </div>
+          <ol class="steps-dialog__list" data-steps-list></ol>
+        </div>
+      </dialog>
+    """
 
 
 def render_submission_row(project: Project, entry: Submission, rank: int) -> str:
@@ -638,7 +673,7 @@ def render_submission_row(project: Project, entry: Submission, rank: int) -> str
                 <span class="time">{html(display_metric(project, entry.time_seconds))}</span>
                 <span class="seconds">{entry.time_seconds:,}s</span>
               </td>
-              <td data-label="关键步骤">{render_steps(entry.steps)}</td>
+              <td data-label="关键步骤">{render_steps_button(project, entry, rank)}</td>
               <td data-label="提交">
                 <div class="proof-links">{"".join(detail_links)}</div>
                 <time datetime="{html(entry.date)}">{html(entry.date)}</time>
@@ -815,6 +850,57 @@ def render_submission_script() -> str:
           window.open(`${form.dataset.issueBase}?${params.toString()}`, "_blank", "noopener");
         });
       });
+
+      const stepsDialog = document.querySelector("[data-steps-dialog]");
+      if (stepsDialog) {
+        const dialogTitle = stepsDialog.querySelector("#steps-dialog-title");
+        const dialogMeta = stepsDialog.querySelector("[data-steps-meta]");
+        const stepsList = stepsDialog.querySelector("[data-steps-list]");
+        const closeDialog = () => {
+          if (typeof stepsDialog.close === "function") {
+            stepsDialog.close();
+          } else {
+            stepsDialog.removeAttribute("open");
+          }
+        };
+
+        document.querySelectorAll("[data-steps-button]").forEach((button) => {
+          button.addEventListener("click", () => {
+            let steps = [];
+            try {
+              steps = JSON.parse(button.dataset.steps || "[]");
+            } catch {
+              steps = [];
+            }
+
+            dialogTitle.textContent = `${button.dataset.runner || "选手"} 的关键步骤`;
+            dialogMeta.textContent = `#${button.dataset.rank || "-"} · ${button.dataset.metric || ""}`;
+            stepsList.replaceChildren(
+              ...steps.map((step) => {
+                const item = document.createElement("li");
+                item.textContent = step;
+                return item;
+              })
+            );
+
+            if (typeof stepsDialog.showModal === "function") {
+              stepsDialog.showModal();
+            } else {
+              stepsDialog.setAttribute("open", "");
+            }
+          });
+        });
+
+        stepsDialog.querySelectorAll("[data-steps-close]").forEach((button) => {
+          button.addEventListener("click", closeDialog);
+        });
+
+        stepsDialog.addEventListener("click", (event) => {
+          if (event.target === stepsDialog) {
+            closeDialog();
+          }
+        });
+      }
     })();
   </script>
     """
@@ -851,6 +937,10 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
           <a class="button" href="#submit">提交成绩</a>
           <a class="button button--ghost" href="../index.html#projects">全部项目</a>
         </div>
+        <p class="download-warning">
+          <strong>高风险下载：</strong>仅限具备隔离测试经验的专业用户在虚拟机或测试机中使用。非专业用户禁止下载或运行，可能损坏设备、破坏系统或造成数据丢失。
+          <a href="{html(project.download_url)}" target="_blank" rel="noopener noreferrer">确认风险后打开软件下载</a>
+        </p>
       </div>
       <dl class="stat-grid" aria-label="当前统计">
         <div>
@@ -898,6 +988,7 @@ def render_project_page(state: ProjectState, page: int, total_pages: int, built_
         </table>
       </div>
       {render_pagination(page, total_pages)}
+      {render_steps_dialog()}
     </section>
 
 {render_submission_form(project)}
