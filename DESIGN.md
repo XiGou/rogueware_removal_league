@@ -45,6 +45,6 @@ The current visual language is a dark league sheet: warm charcoal surfaces, acid
 
 - Generator: Python standard library in `generate_site.py`.
 - Styles: vanilla CSS in `assets/style.css`.
-- Projects: `data/projects.json`.
+- Projects: `data/projects/<slug>.json`.
 - Submissions: `data/submissions/<slug>/*.json`, one file per run.
 - Deploy: GitHub Pages workflow in `.github/workflows/pages.yml`.

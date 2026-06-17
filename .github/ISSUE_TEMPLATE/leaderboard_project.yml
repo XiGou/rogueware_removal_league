@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Use this form to propose a new league project before opening a PR.
-        A project PR should add one entry to `data/projects.json` and create `data/submissions/<slug>/` with `.gitkeep`.
+        A project PR should add one `data/projects/<slug>.json` file and create `data/submissions/<slug>/` with `.gitkeep`.
 
   - type: input
     id: slug

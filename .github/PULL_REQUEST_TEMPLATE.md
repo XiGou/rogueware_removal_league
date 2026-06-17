@@ -22,7 +22,7 @@
 
 ## New League Project Checklist
 
-- [ ] I edited `data/projects.json`.
+- [ ] I added `data/projects/<slug>.json`.
 - [ ] I created `data/submissions/<slug>/` with `.gitkeep`.
 - [ ] The slug uses lowercase letters, numbers, and hyphens only.
 - [ ] The rules define the start point, end point, and completion criteria.

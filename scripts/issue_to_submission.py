@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-PROJECTS_FILE = ROOT / "data" / "projects.json"
+PROJECTS_DIR = ROOT / "data" / "projects"
 SUBMISSIONS_DIR = ROOT / "data" / "submissions"
 SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")
 
@@ -87,8 +87,27 @@ def safe_name(value: str) -> str:
 
 
 def load_project_slugs() -> set[str]:
-    projects = json.loads(PROJECTS_FILE.read_text(encoding="utf-8"))
-    return {project["slug"] for project in projects}
+    if not PROJECTS_DIR.exists():
+        raise SystemExit(f"Missing project registry directory: {PROJECTS_DIR}")
+    if not PROJECTS_DIR.is_dir():
+        raise SystemExit(f"{PROJECTS_DIR} must be a directory containing one JSON file per project")
+
+    project_files = sorted(PROJECTS_DIR.glob("*.json"))
+    if not project_files:
+        raise SystemExit(f"No project files found in {PROJECTS_DIR}")
+
+    slugs: set[str] = set()
+    for project_file in project_files:
+        raw_project = json.loads(project_file.read_text(encoding="utf-8"))
+        if not isinstance(raw_project, dict):
+            raise SystemExit(f"{project_file} must contain a JSON object")
+        slug = raw_project.get("slug")
+        if not isinstance(slug, str):
+            raise SystemExit(f"{project_file}: missing slug")
+        if project_file.stem != slug:
+            raise SystemExit(f"{project_file}: file name must match slug {slug}.json")
+        slugs.add(slug)
+    return slugs
 
 
 def write_output(key: str, value: str) -> None:

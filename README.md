@@ -15,7 +15,8 @@
 ```text
 .
 ├── data/
-│   ├── projects.json              # 竞赛项目目录
+│   ├── projects/                  # 每个项目一个 JSON 文件
+│   │   └── wintoolbox.json
 │   └── submissions/
 │       └── wintoolbox/            # 某个项目的成绩目录，每条记录一个 JSON
 ├── assets/
@@ -79,7 +80,7 @@ Issue 表单只收集会进入榜单 JSON 的核心字段。自动 PR 会把该 
 
 新增项目需要同时修改两个地方：
 
-1. 在 `data/projects.json` 追加项目元数据。
+1. 在 `data/projects/<slug>.json` 新建项目元数据文件。
 2. 创建 `data/submissions/<slug>/` 目录，并放入 `.gitkeep`。
 
 也可以先点击首页的“提交新项目”，用结构化 Issue 表单描述 slug、类别、计时规则、证据要求和安全说明。

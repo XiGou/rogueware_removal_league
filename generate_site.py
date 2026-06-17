@@ -2,7 +2,7 @@
 """Generate the Rogueware Removal League static site.
 
 Data lives in two layers:
-- data/projects.json declares the league projects.
+- data/projects/<project-slug>.json declares each league project.
 - data/submissions/<project-slug>/*.json stores one submission per file.
 
 The generator uses only the Python standard library so GitHub Pages builds stay
@@ -24,7 +24,7 @@ from urllib.parse import urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
-PROJECTS_FILE = DATA_DIR / "projects.json"
+PROJECTS_DIR = DATA_DIR / "projects"
 SUBMISSIONS_DIR = DATA_DIR / "submissions"
 PUBLIC_DIR = ROOT / "public"
 ASSETS_SRC = ROOT / "assets"
@@ -239,21 +239,26 @@ def normalize_submission(raw: object, label: str) -> Submission:
 
 
 def load_projects() -> list[Project]:
-    if not PROJECTS_FILE.exists():
-        raise SystemExit(f"Missing project registry: {PROJECTS_FILE}")
+    if not PROJECTS_DIR.exists():
+        raise SystemExit(f"Missing project registry directory: {PROJECTS_DIR}")
+    if not PROJECTS_DIR.is_dir():
+        raise SystemExit(f"{PROJECTS_DIR} must be a directory containing one JSON file per project")
 
-    raw_projects = load_json(PROJECTS_FILE)
-    if not isinstance(raw_projects, list):
-        raise SystemExit(f"{PROJECTS_FILE} must contain a JSON array")
+    project_files = sorted(PROJECTS_DIR.glob("*.json"))
+    if not project_files:
+        raise SystemExit(f"No project files found in {PROJECTS_DIR}")
 
     projects: list[Project] = []
     errors: list[str] = []
     seen: set[str] = set()
-    for index, raw_project in enumerate(raw_projects, start=1):
+    for project_file in project_files:
         try:
-            project = normalize_project(raw_project, index)
+            raw_project = load_json(project_file)
+            project = normalize_project(raw_project, project_file.name)
+            if project_file.stem != project.slug:
+                raise ValueError(f"{project_file}: file name must match slug {project.slug}.json")
             if project.slug in seen:
-                raise ValueError(f"project #{index}: duplicate slug {project.slug}")
+                raise ValueError(f"{project_file}: duplicate slug {project.slug}")
             seen.add(project.slug)
             projects.append(project)
         except ValueError as exc:
@@ -548,7 +553,7 @@ def render_index(states: list[ProjectState], built_at: str) -> str:
           <p class="eyebrow">LEAGUE PROJECTS</p>
           <h2 id="projects-title">竞赛项目</h2>
         </div>
-        <p>{len(states)} 个项目，按 <code>data/projects.json</code> 生成</p>
+        <p>{len(states)} 个项目，按 <code>data/projects/</code> 生成</p>
       </div>
       <div class="project-grid">
         {project_cards}
@@ -561,14 +566,14 @@ def render_index(states: list[ProjectState], built_at: str) -> str:
         <h2 id="protocol-title">新增项目流程</h2>
         <ol class="rule-list">
           <li>在 Issue 中说明新榜单要测试什么、如何计时、如何判定完成。</li>
-          <li>在 <code>data/projects.json</code> 追加一个项目对象，slug 使用小写字母、数字和连字符。</li>
+          <li>在 <code>data/projects/&lt;slug&gt;.json</code> 新建一个项目文件，slug 使用小写字母、数字和连字符。</li>
           <li>创建 <code>data/submissions/&lt;slug&gt;/</code> 目录，并放入 <code>.gitkeep</code>。</li>
           <li>运行 <code>python3 generate_site.py</code>，确认总览页和项目页都能生成。</li>
         </ol>
       </div>
       <div class="schema-card" aria-label="项目 JSON 示例">
         <div class="schema-card__bar">
-          <span>data/projects.json</span>
+          <span>data/projects/&lt;slug&gt;.json</span>
           <span>PROJECT</span>
         </div>
         <pre><code>{render_project_sample()}</code></pre>
